@@ -6,6 +6,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { authenticateToken, AuthRequest } from "./middleware/auth";
 import goalRoutes from "./routes/goals";
+import mealsRouter from "./routes/meals";
 
 
 
@@ -24,6 +25,9 @@ app.use(express.json());
 app.get("/", (_req, res) => {
   res.send("API funcionando 🎉");
 });
+
+app.use("/meals", mealsRouter);
+
 
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
