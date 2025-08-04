@@ -21,6 +21,32 @@ const mealEntrySchema = z.object({
   quantity: z.number().int().positive(),
 });
 
+// Ruta: GET /meals-with-entries
+router.get("/with-entries", authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.userId;
+
+    if (typeof userId !== "number") {
+      return res.status(401).json({ error: "Usuario no autenticado" });
+    }
+
+    const meals = await prisma.meal.findMany({
+      where: { userId },
+      include: {
+        entries: true,
+      },
+      orderBy: {
+        date: "desc",
+      },
+    });
+
+    return res.json(meals);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Error al obtener comidas con entradas" });
+  }
+});
+
 // Ruta para crear una comida (POST /meals)
 router.post("/", authenticateToken, async (req: AuthRequest, res) => {
   try {
@@ -419,6 +445,179 @@ router.delete("/:mealId/entries/:entryId", authenticateToken, async (req: AuthRe
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Error al eliminar la entrada" });
+  }
+});
+
+// DELETE /meals/:mealId - Eliminar una comida y sus entradas
+router.delete("/:mealId", authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const mealId = Number(req.params.mealId);
+    const userId = req.userId;
+
+    if (isNaN(mealId)) {
+      return res.status(400).json({ error: "mealId inválido" });
+    }
+
+    if (typeof userId !== "number") {
+      return res.status(401).json({ error: "Usuario no autenticado" });
+    }
+
+    // Verificar que la comida existe y pertenece al usuario
+    const meal = await prisma.meal.findUnique({
+      where: { id: mealId },
+    });
+
+    if (!meal || meal.userId !== userId) {
+      return res.status(404).json({ error: "Comida no encontrada o no autorizada" });
+    }
+
+    // Eliminar entradas asociadas
+    await prisma.mealEntry.deleteMany({
+      where: { mealId },
+    });
+
+    // Eliminar la comida
+    await prisma.meal.delete({
+      where: { id: mealId },
+    });
+
+    return res.status(204).send();
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Error al eliminar la comida" });
+  }
+});
+
+// Ruta para actualizar una comida (PUT /meals/:mealId)
+router.put("/:mealId", authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const mealId = Number(req.params.mealId);
+    if (isNaN(mealId)) {
+      return res.status(400).json({ error: "ID de comida inválido" });
+    }
+
+    const parsed = mealSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Datos inválidos en la entrada", details: parsed.error.issues });
+    }
+
+    if (typeof req.userId !== "number") {
+      return res.status(401).json({ error: "Usuario no autenticado" });
+    }
+
+    // Verificar que la comida exista y pertenezca al usuario
+    const existingMeal = await prisma.meal.findUnique({
+      where: { id: mealId },
+    });
+
+    if (!existingMeal || existingMeal.userId !== req.userId) {
+      return res.status(404).json({ error: "Comida no encontrada o no autorizada" });
+    }
+
+    const updatedMeal = await prisma.meal.update({
+      where: { id: mealId },
+      data: {
+        date: new Date(parsed.data.date),
+      },
+    });
+
+    return res.json(updatedMeal);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Error al actualizar la comida" });
+  }
+});
+
+// Ruta para actualizar una entrada de comida (PUT /entries/:entryId)
+router.put("/entries/:entryId", authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const entryId = Number(req.params.entryId);
+    if (isNaN(entryId)) {
+      return res.status(400).json({ error: "ID de entrada inválido" });
+    }
+
+    const parsed = mealEntrySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Datos inválidos en la entrada", details: parsed.error.issues });
+    }
+
+    if (typeof req.userId !== "number") {
+      return res.status(401).json({ error: "Usuario no autenticado" });
+    }
+
+    // Verificar que la entrada existe y pertenece a una comida del usuario
+    const entry = await prisma.mealEntry.findUnique({
+      where: { id: entryId },
+      include: {
+        meal: true,
+      },
+    });
+
+    if (!entry || entry.meal.userId !== req.userId) {
+      return res.status(404).json({ error: "Entrada no encontrada o no autorizada" });
+    }
+
+    const updatedEntry = await prisma.mealEntry.update({
+      where: { id: entryId },
+      data: {
+        foodName: parsed.data.foodName,
+        calories: parsed.data.calories,
+        protein: parsed.data.protein,
+        carbs: parsed.data.carbs,
+        fat: parsed.data.fat,
+        quantity: parsed.data.quantity,
+      },
+    });
+
+    return res.json(updatedEntry);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Error al actualizar la entrada" });
+  }
+});
+
+// POST /meals/:mealId/entries - Crear una entrada en una comida
+router.post("/:mealId/entries", authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const mealId = Number(req.params.mealId);
+    if (isNaN(mealId)) {
+      return res.status(400).json({ error: "mealId inválido" });
+    }
+
+    const parsed = mealEntrySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Datos inválidos en la entrada", details: parsed.error.issues });
+    }
+
+    if (typeof req.userId !== "number") {
+      return res.status(401).json({ error: "Usuario no autenticado" });
+    }
+
+    // Verificar que la comida existe y pertenece al usuario
+    const meal = await prisma.meal.findUnique({
+      where: { id: mealId },
+    });
+
+    if (!meal || meal.userId !== req.userId) {
+      return res.status(404).json({ error: "Comida no encontrada o no autorizada" });
+    }
+
+    const entry = await prisma.mealEntry.create({
+      data: {
+        mealId,
+        foodName: parsed.data.foodName,
+        calories: parsed.data.calories,
+        protein: parsed.data.protein,
+        carbs: parsed.data.carbs,
+        fat: parsed.data.fat,
+        quantity: parsed.data.quantity,
+      },
+    });
+
+    return res.status(201).json(entry);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Error al crear la entrada" });
   }
 });
 
