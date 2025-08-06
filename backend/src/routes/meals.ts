@@ -90,7 +90,6 @@ router.post("/:mealId/entries", authenticateToken, async (req: AuthRequest, res)
       return res.status(400).json({ error: "mealId inválido" });
     }
 
-    // Verificar que la comida existe y pertenece al usuario
     const meal = await prisma.meal.findUnique({
       where: { id: mealId },
     });
@@ -99,7 +98,6 @@ router.post("/:mealId/entries", authenticateToken, async (req: AuthRequest, res)
       return res.status(404).json({ error: "Comida no encontrada o no autorizada" });
     }
 
-    // Crear la entrada
     const entry = await prisma.mealEntry.create({
       data: {
         mealId,
@@ -154,7 +152,6 @@ router.get("/:mealId/entries", authenticateToken, async (req: AuthRequest, res) 
       return res.status(401).json({ error: "Usuario no autenticado" });
     }
 
-    // Verificar que la comida exista y pertenezca al usuario
     const meal = await prisma.meal.findUnique({
       where: { id: mealId },
     });
@@ -194,7 +191,6 @@ router.put("/:mealId/entries/:entryId", authenticateToken, async (req: AuthReque
       return res.status(400).json({ error: "Datos inválidos en la entrada", details: parsed.error.issues });
     }
 
-    // Verificar que la comida existe y pertenece al usuario
     const meal = await prisma.meal.findUnique({
       where: { id: mealId },
     });
@@ -203,7 +199,6 @@ router.put("/:mealId/entries/:entryId", authenticateToken, async (req: AuthReque
       return res.status(404).json({ error: "Comida no encontrada o no autorizada" });
     }
 
-    // Verificar que la entrada existe
     const entry = await prisma.mealEntry.findUnique({
       where: { id: entryId },
     });
@@ -245,7 +240,6 @@ router.delete("/:mealId/entries/:entryId", authenticateToken, async (req: AuthRe
       return res.status(401).json({ error: "Usuario no autenticado" });
     }
 
-    // Verificar que la comida existe y pertenece al usuario
     const meal = await prisma.meal.findUnique({
       where: { id: mealId },
     });
@@ -254,7 +248,6 @@ router.delete("/:mealId/entries/:entryId", authenticateToken, async (req: AuthRe
       return res.status(404).json({ error: "Comida no encontrada o no autorizada" });
     }
 
-    // Verificar que la entrada existe
     const entry = await prisma.mealEntry.findUnique({
       where: { id: entryId },
     });
@@ -287,7 +280,6 @@ router.get("/:mealId", authenticateToken, async (req: AuthRequest, res) => {
       return res.status(401).json({ error: "Usuario no autenticado" });
     }
 
-    // Buscar la comida y sus entradas
     const meal = await prisma.meal.findUnique({
       where: { id: mealId },
       include: {
@@ -367,7 +359,6 @@ router.put("/:mealId/entries/:entryId", authenticateToken, async (req: AuthReque
       return res.status(400).json({ error: "Datos inválidos en la entrada", details: parsed.error.issues });
     }
 
-    // Verificar que la comida exista y pertenezca al usuario
     const meal = await prisma.meal.findUnique({
       where: { id: mealId },
     });
@@ -376,7 +367,6 @@ router.put("/:mealId/entries/:entryId", authenticateToken, async (req: AuthReque
       return res.status(404).json({ error: "Comida no encontrada o no autorizada" });
     }
 
-    // Verificar que la entrada exista y pertenezca a la comida
     const entry = await prisma.mealEntry.findUnique({
       where: { id: entryId },
     });
@@ -419,7 +409,6 @@ router.delete("/:mealId/entries/:entryId", authenticateToken, async (req: AuthRe
       return res.status(401).json({ error: "Usuario no autenticado" });
     }
 
-    // Verificar que la comida existe y pertenece al usuario
     const meal = await prisma.meal.findUnique({
       where: { id: mealId },
     });
@@ -428,7 +417,6 @@ router.delete("/:mealId/entries/:entryId", authenticateToken, async (req: AuthRe
       return res.status(404).json({ error: "Comida no encontrada o no autorizada" });
     }
 
-    // Verificar que la entrada existe y pertenece a la comida
     const entry = await prisma.mealEntry.findUnique({
       where: { id: entryId },
     });
@@ -462,7 +450,6 @@ router.delete("/:mealId", authenticateToken, async (req: AuthRequest, res) => {
       return res.status(401).json({ error: "Usuario no autenticado" });
     }
 
-    // Verificar que la comida existe y pertenece al usuario
     const meal = await prisma.meal.findUnique({
       where: { id: mealId },
     });
@@ -471,12 +458,10 @@ router.delete("/:mealId", authenticateToken, async (req: AuthRequest, res) => {
       return res.status(404).json({ error: "Comida no encontrada o no autorizada" });
     }
 
-    // Eliminar entradas asociadas
     await prisma.mealEntry.deleteMany({
       where: { mealId },
     });
 
-    // Eliminar la comida
     await prisma.meal.delete({
       where: { id: mealId },
     });
@@ -505,7 +490,6 @@ router.put("/:mealId", authenticateToken, async (req: AuthRequest, res) => {
       return res.status(401).json({ error: "Usuario no autenticado" });
     }
 
-    // Verificar que la comida exista y pertenezca al usuario
     const existingMeal = await prisma.meal.findUnique({
       where: { id: mealId },
     });
@@ -545,7 +529,6 @@ router.put("/entries/:entryId", authenticateToken, async (req: AuthRequest, res)
       return res.status(401).json({ error: "Usuario no autenticado" });
     }
 
-    // Verificar que la entrada existe y pertenece a una comida del usuario
     const entry = await prisma.mealEntry.findUnique({
       where: { id: entryId },
       include: {
@@ -593,7 +576,6 @@ router.post("/:mealId/entries", authenticateToken, async (req: AuthRequest, res)
       return res.status(401).json({ error: "Usuario no autenticado" });
     }
 
-    // Verificar que la comida existe y pertenece al usuario
     const meal = await prisma.meal.findUnique({
       where: { id: mealId },
     });
@@ -621,6 +603,81 @@ router.post("/:mealId/entries", authenticateToken, async (req: AuthRequest, res)
   }
 });
 
+// Obtener resumen de macros por comida
+router.get("/macros-summary", authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const meals = await prisma.meal.findMany({
+      where: { userId: req.userId },
+      include: { entries: true },
+      orderBy: { date: "desc" },
+    });
+
+    const summary = meals.map((meal) => {
+      const macros = meal.entries.reduce(
+        (acc, entry) => {
+          acc.calories += entry.calories * entry.quantity;
+          acc.protein += entry.protein * entry.quantity;
+          acc.carbs += entry.carbs * entry.quantity;
+          acc.fat += entry.fat * entry.quantity;
+          return acc;
+        },
+        { calories: 0, protein: 0, carbs: 0, fat: 0 }
+      );
+
+      return {
+        mealId: meal.id,
+        date: meal.date.toISOString().split("T")[0],
+        ...macros,
+      };
+    });
+
+    return res.json(summary);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Error al obtener resumen de macros" });
+  }
+});
+
+// GET /meals/daily-summary - Resumen total de macros por día
+router.get("/daily-summary", authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    // Traer todas las comidas del usuario con sus entradas
+    const meals = await prisma.meal.findMany({
+      where: { userId: req.userId },
+      include: { entries: true },
+      orderBy: { date: "desc" },
+    });
+
+    // Agrupar por fecha
+    const summaryByDate: Record<string, { calories: number; protein: number; carbs: number; fat: number }> = {};
+
+    meals.forEach((meal) => {
+      const dateKey = meal.date.toISOString().split("T")[0];
+
+      if (!summaryByDate[dateKey]) {
+        summaryByDate[dateKey] = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+      }
+
+      meal.entries.forEach((entry) => {
+        summaryByDate[dateKey].calories += entry.calories * entry.quantity;
+        summaryByDate[dateKey].protein += entry.protein * entry.quantity;
+        summaryByDate[dateKey].carbs += entry.carbs * entry.quantity;
+        summaryByDate[dateKey].fat += entry.fat * entry.quantity;
+      });
+    });
+
+    // Convertir a array para la respuesta
+    const result = Object.entries(summaryByDate).map(([date, macros]) => ({
+      date,
+      ...macros,
+    }));
+
+    res.json(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error al obtener resumen diario de macros" });
+  }
+});
 
 
 export default router;

@@ -1,10 +1,12 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
-// Extendemos la interfaz Request para incluir userId
 export interface AuthRequest extends Request {
   userId?: number;
 }
+
+const JWT_SECRET = process.env.JWT_SECRET || "supersecreto";
+
 
 export const authenticateToken = (
   req: AuthRequest,
@@ -12,7 +14,7 @@ export const authenticateToken = (
   next: NextFunction
 ) => {
   const authHeader = req.headers["authorization"];
-  const token = authHeader?.split(" ")[1]; // Formato: "Bearer <token>"
+  const token = authHeader?.split(" ")[1];
 
   if (!token) {
     return res.status(401).json({ error: "Token no proporcionado" });
@@ -23,7 +25,6 @@ export const authenticateToken = (
       return res.status(403).json({ error: "Token inválido" });
     }
 
-    // ✅ Aquí asumimos que el token contiene un campo userId
     const decoded = payload as { userId: number };
     req.userId = decoded.userId;
 
