@@ -603,7 +603,6 @@ router.post("/:mealId/entries", authenticateToken, async (req: AuthRequest, res)
   }
 });
 
-// Obtener resumen de macros por comida
 router.get("/macros-summary", authenticateToken, async (req: AuthRequest, res) => {
   try {
     const meals = await prisma.meal.findMany({
@@ -641,14 +640,12 @@ router.get("/macros-summary", authenticateToken, async (req: AuthRequest, res) =
 // GET /meals/daily-summary - Resumen total de macros por día
 router.get("/daily-summary", authenticateToken, async (req: AuthRequest, res) => {
   try {
-    // Traer todas las comidas del usuario con sus entradas
     const meals = await prisma.meal.findMany({
       where: { userId: req.userId },
       include: { entries: true },
       orderBy: { date: "desc" },
     });
 
-    // Agrupar por fecha
     const summaryByDate: Record<string, { calories: number; protein: number; carbs: number; fat: number }> = {};
 
     meals.forEach((meal) => {
@@ -666,7 +663,6 @@ router.get("/daily-summary", authenticateToken, async (req: AuthRequest, res) =>
       });
     });
 
-    // Convertir a array para la respuesta
     const result = Object.entries(summaryByDate).map(([date, macros]) => ({
       date,
       ...macros,
@@ -676,6 +672,60 @@ router.get("/daily-summary", authenticateToken, async (req: AuthRequest, res) =>
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error al obtener resumen diario de macros" });
+  }
+});
+
+// Actualizar comida
+router.put("/:id", authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const mealId = parseInt(req.params.id);
+    const { date } = req.body;
+
+    if (!date) {
+      return res.status(400).json({ error: "La fecha es obligatoria" });
+    }
+
+    const meal = await prisma.meal.findUnique({
+      where: { id: mealId },
+    });
+
+    if (!meal || meal.userId !== req.userId) {
+      return res.status(404).json({ error: "Comida no encontrada" });
+    }
+
+    const updatedMeal = await prisma.meal.update({
+      where: { id: mealId },
+      data: { date: new Date(date) },
+    });
+
+    return res.json(updatedMeal);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Error al actualizar la comida" });
+  }
+});
+
+// Eliminar comida
+router.delete("/:id", authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const mealId = parseInt(req.params.id);
+
+    const meal = await prisma.meal.findUnique({
+      where: { id: mealId },
+    });
+
+    if (!meal || meal.userId !== req.userId) {
+      return res.status(404).json({ error: "Comida no encontrada" });
+    }
+
+    await prisma.meal.delete({
+      where: { id: mealId },
+    });
+
+    return res.json({ message: "Comida eliminada correctamente" });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Error al eliminar la comida" });
   }
 });
 

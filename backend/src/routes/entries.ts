@@ -74,4 +74,66 @@ router.put("/:id", authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
+const createEntrySchema = z.object({
+  mealId: z.number().int().positive(),
+  foodName: z.string().min(1),
+  calories: z.number().nonnegative(),
+  protein: z.number().nonnegative(),
+  carbs: z.number().nonnegative(),
+  fat: z.number().nonnegative(),
+  quantity: z.number().int().positive().default(1),
+});
+
+router.post("/", authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const parsed = createEntrySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Datos inválidos", details: parsed.error.issues });
+    }
+
+    const { mealId, ...entryData } = parsed.data;
+
+    const meal = await prisma.meal.findFirst({
+      where: { id: mealId, userId: req.userId },
+    });
+
+    if (!meal) {
+      return res.status(404).json({ error: "Comida no encontrada" });
+    }
+
+    const entry = await prisma.mealEntry.create({
+      data: { mealId, ...entryData },
+    });
+
+    return res.status(201).json(entry);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Error al crear la entrada" });
+  }
+});
+
+router.get("/:mealId", authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const mealId = parseInt(req.params.mealId);
+
+    const meal = await prisma.meal.findFirst({
+      where: { id: mealId, userId: req.userId },
+    });
+
+    if (!meal) {
+      return res.status(404).json({ error: "Comida no encontrada" });
+    }
+
+    const entries = await prisma.mealEntry.findMany({
+      where: { mealId },
+    });
+
+    return res.json(entries);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Error al obtener las entradas" });
+  }
+});
+
+
 export default router;

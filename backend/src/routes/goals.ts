@@ -13,6 +13,25 @@ const goalSchema = z.object({
   fat: z.number().int().positive(),
 });
 
+// GET - obtener objetivo del usuario
+router.get("/", authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const goal = await prisma.goal.findFirst({
+      where: { userId: req.userId },
+    });
+
+    if (!goal) {
+      return res.status(404).json({ error: "No tienes objetivos configurados" });
+    }
+
+    return res.json(goal);
+  } catch (error) {
+    console.error("Error al obtener objetivos:", error);
+    return res.status(500).json({ error: "Error al obtener objetivos" });
+  }
+});
+
+// POST - crear o actualizar objetivo
 router.post("/", authenticateToken, async (req: AuthRequest, res) => {
   try {
     const data = goalSchema.parse(req.body);
@@ -22,7 +41,6 @@ router.post("/", authenticateToken, async (req: AuthRequest, res) => {
     });
 
     let goal;
-
     if (existingGoal) {
       goal = await prisma.goal.update({
         where: { id: existingGoal.id },
@@ -37,13 +55,67 @@ router.post("/", authenticateToken, async (req: AuthRequest, res) => {
       });
     }
 
-    res.json({ goal });
+    return res.json(goal);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: "Datos inválidos", details: error.issues });
+      return res
+        .status(400)
+        .json({ error: "Datos inválidos", details: error.issues });
     }
-    console.error("Error al crear/actualizar goal:", error);
-    res.status(500).json({ error: "Error al guardar objetivos" });
+    console.error("Error al crear/actualizar objetivos:", error);
+    return res.status(500).json({ error: "Error al guardar objetivos" });
+  }
+});
+
+// PUT - actualizar objetivo existente
+router.put("/", authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const data = goalSchema.partial().parse(req.body);
+
+    const existingGoal = await prisma.goal.findFirst({
+      where: { userId: req.userId },
+    });
+
+    if (!existingGoal) {
+      return res.status(404).json({ error: "No tienes objetivos configurados" });
+    }
+
+    const updatedGoal = await prisma.goal.update({
+      where: { id: existingGoal.id },
+      data,
+    });
+
+    return res.json(updatedGoal);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res
+        .status(400)
+        .json({ error: "Datos inválidos", details: error.issues });
+    }
+    console.error("Error al actualizar objetivos:", error);
+    return res.status(500).json({ error: "Error al actualizar objetivos" });
+  }
+});
+
+// DELETE - eliminar objetivo
+router.delete("/", authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const existingGoal = await prisma.goal.findFirst({
+      where: { userId: req.userId },
+    });
+
+    if (!existingGoal) {
+      return res.status(404).json({ error: "No tienes objetivos configurados" });
+    }
+
+    await prisma.goal.delete({
+      where: { id: existingGoal.id },
+    });
+
+    return res.json({ message: "Objetivos eliminados correctamente" });
+  } catch (error) {
+    console.error("Error al eliminar objetivos:", error);
+    return res.status(500).json({ error: "Error al eliminar objetivos" });
   }
 });
 
